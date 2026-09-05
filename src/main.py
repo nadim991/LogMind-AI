@@ -1,74 +1,87 @@
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import sys
+
+# Current script path and src path setup
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
 
 from fastapi import FastAPI, HTTPException, Security, Depends
-from ai_agent import SOCAiAgent
-from slack_notifier import SlackNotifier
-from fastapi import FastAPI, HTTPException, Security, Depends
-from fastapi.security.api_key import APIKeyHeader
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-import re
-from ai_agent import SOCAiAgent
+from sqlalchemy.orm import Session
+
+# Direct local imports
+from rule_engine import RuleEngine
+from ai_agent import AIAgent
 from slack_notifier import SlackNotifier
+from database import engine, Base, get_db
+import models
 
-app = FastAPI(title="LogMind AI - Cloud Engine", version="1.0.0")
+# Automatically create tables in PostgreSQL on startup
+Base.metadata.create_all(bind=engine)
 
-# API Key Security for Multi-Tenant SaaS
-API_KEY_NAME = "X-API-KEY"
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+app = FastAPI(title="LogMind AI SaaS Engine")
 
-# Demo Valid API Keys (SaaS Database Table-এ সেভ থাকবে)
-VALID_API_KEYS = {"client_secret_key_123", "client_secret_key_456"}
+# Security API Key setup
+API_KEY = os.getenv("API_KEY", "client_secret_key_123")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
-def verify_api_key(api_key: str = Depends(api_key_header)):
-    if api_key not in VALID_API_KEYS:
-        raise HTTPException(status_code=403, detail="Unauthorized API Key")
+def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden: Invalid API Key")
     return api_key
 
-# Request Payload Schema
-class LogPayload(BaseModel):
-    ip: str
-    url: str
-    status_code: int = 200
-
-# Initialize AI & Slack
-ai_agent = SOCAiAgent()
+# Initialize core services
+rule_engine = RuleEngine()
+ai_agent = AIAgent()
 slack = SlackNotifier()
 
-# Detection Patterns
-SQLI_PATTERN = re.compile(r"('|\"|%27|--|union\s+select|select\s+.*\s+from)", re.IGNORECASE)
-CMDI_PATTERN = re.compile(r"(;|\|\||&&|\$\(.*\)|`.*`)", re.IGNORECASE)
+# Request Pydantic model
+class LogIngest(BaseModel):
+    ip: str
+    url: str
+    status_code: int
 
-@app.post("/api/v1/ingest", dependencies=[Depends(verify_api_key)])
-async def ingest_log(log: LogPayload):
-    threats = []
+@app.get("/")
+def read_root():
+    return {"message": "LogMind AI Engine is active"}
+
+@app.post("/api/v1/ingest")
+def ingest_log(log: LogIngest, api_key: str = Depends(verify_api_key), db: Session = Depends(get_db)):
+    threats = rule_engine.analyze(log.url)
     
-    if SQLI_PATTERN.search(log.url):
-        threats.append("SQL Injection")
-    if CMDI_PATTERN.search(log.url):
-        threats.append("Command Injection")
+    threat_str = None
+    insight_text = None
+    
+    if threats:
+        threat_str = ", ".join(threats)
+        insight = ai_agent.analyze_threat(log.ip, log.url, threats)
+        insight_text = str(insight) if insight else "Potential threat detected."
+        
+        slack.send_threat_alert(log.ip, log.url, threat_str, insight_text)
 
-    if not threats:
-        return {"status": "clean", "message": "No threat detected"}
-
-    # Threat Found -> Call AI Agent
-    threat_str = ", ".join(threats)
-    insight = ai_agent.analyze_threat(log.ip, log.url, threats)
-
-    # AI Insight স্ট্রিং নিশ্চিত করা (যদি AI থেকে খালি রেসপন্স আসে তবে ডিফল্ট টেক্সট দেখাবে)
-    insight_text = str(insight) if insight else "Potential threat detected on target endpoint. Immediate review required."
-
-    # Send Real-Time Slack Alert with Insight
-    slack.send_threat_alert(log.ip, log.url, threat_str, insight_text)
-
-    # Send Real-Time Slack Alert
-    slack.send_threat_alert(log.ip, log.url, threat_str, insight)
+    db_log = models.SecurityLog(
+        ip=log.ip,
+        url=log.url,
+        status_code=log.status_code,
+        threat_type=threat_str,
+        ai_insight=insight_text
+    )
+    db.add(db_log)
+    db.commit()
+    db.refresh(db_log)
 
     return {
-        "status": "alert",
-        "threats": threats,
-        "ip": log.ip,
-        "url": log.url,
-        "ai_insight": insight
+        "status": "success", 
+        "threats": threats, 
+        "log_id": db_log.id
+    }
+
+@app.get("/api/v1/alerts")
+def get_all_alerts(api_key: str = Depends(verify_api_key), db: Session = Depends(get_db)):
+    alerts = db.query(models.SecurityLog).filter(models.SecurityLog.threat_type.isnot(None)).all()
+    return {
+        "total_alerts": len(alerts), 
+        "data": alerts
     }
