@@ -10,8 +10,11 @@ class SlackNotifier:
             print("[!] Slack Webhook URL not set. Skipping notification.")
             return
 
+        # insight_text স্ট্রিংয়ে রূপান্তর নিশ্চিত করা
+        formatted_insight = str(insight_text) if insight_text else "Suspicious activity detected."
+
         payload = {
-            "text": f"🚨 *LogMind AI - Security Threat Alert!*",
+            "text": "🚨 *LogMind AI - Security Threat Alert!*",
             "attachments": [
                 {
                     "color": "#ef4444",
@@ -19,7 +22,7 @@ class SlackNotifier:
                         {"title": "Attacker IP", "value": ip, "short": True},
                         {"title": "Threat Type", "value": threat_type, "short": True},
                         {"title": "Target Endpoint", "value": f"`{url}`", "short": False},
-                        {"title": "AI SOC Analyst Insight", "value": insight_text, "short": False}
+                        {"title": "AI SOC Analyst Insight", "value": formatted_insight, "short": False}
                     ]
                 }
             ]

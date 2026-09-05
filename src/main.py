@@ -1,3 +1,10 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from fastapi import FastAPI, HTTPException, Security, Depends
+from ai_agent import SOCAiAgent
+from slack_notifier import SlackNotifier
 from fastapi import FastAPI, HTTPException, Security, Depends
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
@@ -48,6 +55,12 @@ async def ingest_log(log: LogPayload):
     # Threat Found -> Call AI Agent
     threat_str = ", ".join(threats)
     insight = ai_agent.analyze_threat(log.ip, log.url, threats)
+
+    # AI Insight স্ট্রিং নিশ্চিত করা (যদি AI থেকে খালি রেসপন্স আসে তবে ডিফল্ট টেক্সট দেখাবে)
+    insight_text = str(insight) if insight else "Potential threat detected on target endpoint. Immediate review required."
+
+    # Send Real-Time Slack Alert with Insight
+    slack.send_threat_alert(log.ip, log.url, threat_str, insight_text)
 
     # Send Real-Time Slack Alert
     slack.send_threat_alert(log.ip, log.url, threat_str, insight)
