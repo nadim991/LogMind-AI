@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LogMind AI - Security Incident Report</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #38bdf8; text-align: center; border-bottom: 2px solid #334155; padding-bottom: 10px; }
+        .meta { text-align: center; color: #94a3b8; font-size: 0.9em; margin-bottom: 30px; }
+        .card { background: #1e293b; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .badge { background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }
+        .ip { color: #cbd5e1; font-family: monospace; font-size: 1.1em; }
+        code { background: #0f172a; padding: 4px 8px; border-radius: 4px; color: #f43f5e; font-family: monospace; }
+        .ai-box { background: #0f172a; border-left: 4px solid #38bdf8; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0; }
+        .ai-box h4 { margin: 0 0 10px 0; color: #38bdf8; }
+        .ai-box p { margin: 0; font-size: 0.95em; line-height: 1.6; color: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LogMind AI - Security Report</h1>
+        <div class="meta">Generated on: 2026-09-05 15:16:58 | Total Alerts: 3</div>
+        
+            <div class="card">
+                <div class="card-header">
+                    <span class="badge threat">SQL Injection</span>
+                    <span class="ip">Attacker IP: 192.168.1.105</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Target URL:</strong> <code>/login.php?user=admin'</code></p>
+                    <div class="ai-box">
+                        <h4>🤖 SOC Analyst Insight (AI)</h4>
+                        <p></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span class="badge threat">Brute Force Attack</span>
+                    <span class="ip">Attacker IP: 192.168.1.105</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Target URL:</strong> <code>/login.php</code></p>
+                    <div class="ai-box">
+                        <h4>🤖 SOC Analyst Insight (AI)</h4>
+                        <p>- **1. Severity & Impact**: High – repeated credential attempts on `/login.php` threaten account compromise, potential lateral movement, and service availability disruption.  <br>- **2. MITRE ATT&CK Mapping**: T1110 – Brute Force (Credential Access).  <br>- **3. Mitigation Action**: Immediately block the source IP, enforce account lockout policies, enable MFA, and alert the admin team to review authentication logs.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span class="badge threat">Command Injection</span>
+                    <span class="ip">Attacker IP: 192.168.1.88</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Target URL:</strong> <code>/ping.php?ip=127.0.0.1;whoami</code></p>
+                    <div class="ai-box">
+                        <h4>🤖 SOC Analyst Insight (AI)</h4>
+                        <p>- **Severity & Impact**: Command injection on `/ping.php` enables arbitrary shell execution on the web server, risking full system compromise, data exfiltration, and lateral movement.  <br>- **MITRE ATT&CK Mapping**: T1059.003 – Command and Scripting Interpreter: Unix Shell.  <br>- **Mitigation Action**: Immediately block the source IP, apply input‑validation patch to `ping.php`, and enforce a WAF rule to sanitize the `ip` parameter.</p>
+                    </div>
+                </div>
+            </div>
+            
+    </div>
+</body>
+</html>

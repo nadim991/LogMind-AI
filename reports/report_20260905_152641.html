@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; background: #ffffff; color: #1e293b; padding: 10px; }
+        h1 { color: #0284c7; text-align: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; font-size: 20px; }
+        .meta { text-align: center; color: #64748b; font-size: 11px; margin-bottom: 20px; }
+        .card { background: #f8fafc; border: 1px solid #cbd5e1; margin-bottom: 15px; padding: 12px; border-radius: 4px; }
+        .card-header { margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .badge { background: #dc2626; color: white; padding: 3px 8px; font-weight: bold; font-size: 10px; border-radius: 3px; }
+        .ip { color: #334155; font-family: monospace; font-size: 12px; float: right; }
+        code { background: #f1f5f9; padding: 2px 4px; color: #be123c; font-family: monospace; font-size: 11px; }
+        .ai-box { background: #f0f9ff; border-left: 3px solid #0284c7; padding: 8px; margin-top: 10px; }
+        .ai-box h4 { margin: 0 0 5px 0; color: #0369a1; font-size: 12px; }
+        .ai-box p { margin: 0; font-size: 10px; line-height: 1.4; color: #334155; }
+    </style>
+</head>
+<body>
+    <h1>LogMind AI - Security Incident Report</h1>
+    <div class="meta">Generated on: 2026-09-05 15:26:41 | Total Alerts: 3</div>
+    
+            <div class="card">
+                <div class="card-header">
+                    <span class="badge threat">SQL Injection</span>
+                    <span class="ip">Attacker IP: 192.168.1.105</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Target URL:</strong> <code>/login.php?user=admin'</code></p>
+                    <div class="ai-box">
+                        <h4>SOC Analyst Insight (AI)</h4>
+                        <p></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span class="badge threat">Brute Force Attack</span>
+                    <span class="ip">Attacker IP: 192.168.1.105</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Target URL:</strong> <code>/login.php</code></p>
+                    <div class="ai-box">
+                        <h4>SOC Analyst Insight (AI)</h4>
+                        <p></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span class="badge threat">Command Injection</span>
+                    <span class="ip">Attacker IP: 192.168.1.88</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Target URL:</strong> <code>/ping.php?ip=127.0.0.1;whoami</code></p>
+                    <div class="ai-box">
+                        <h4>SOC Analyst Insight (AI)</h4>
+                        <p>- **Severity & Impact**: High – the attacker can execute arbitrary commands on the web server, potentially compromising the entire host, exfiltrating data, or pivoting to internal networks.  <br>- **MITRE ATT&CK Mapping**: T1059.003 – Command and Scripting Interpreter: Unix Shell (Command Injection).  <br>- **Mitigation Action**: Immediately block the source IP (192.168.1.88), isolate the affected web server, and patch the vulnerable script; conduct a forensic review of command logs and audit all input validation on web applications.</p>
+                    </div>
+                </div>
+            </div>
+            
+</body>
+</html>

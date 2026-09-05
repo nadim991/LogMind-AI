@@ -1,0 +1,20 @@
+[
+    {
+        "ip": "192.168.1.105",
+        "url": "/login.php?user=admin'",
+        "threat": "SQL Injection",
+        "insight": ""
+    },
+    {
+        "ip": "192.168.1.105",
+        "url": "/login.php",
+        "threat": "Brute Force Attack",
+        "insight": "- **1. Severity & Impact**: High \u2013 repeated credential attempts on `/login.php` threaten account compromise, potential lateral movement, and service availability disruption.  \n- **2. MITRE ATT&CK Mapping**: T1110 \u2013 Brute Force (Credential Access).  \n- **3. Mitigation Action**: Immediately block the source IP, enforce account lockout policies, enable MFA, and alert the admin team to review authentication logs."
+    },
+    {
+        "ip": "192.168.1.88",
+        "url": "/ping.php?ip=127.0.0.1;whoami",
+        "threat": "Command Injection",
+        "insight": "- **Severity & Impact**: Command injection on `/ping.php` enables arbitrary shell execution on the web server, risking full system compromise, data exfiltration, and lateral movement.  \n- **MITRE ATT&CK Mapping**: T1059.003 \u2013 Command and Scripting Interpreter: Unix Shell.  \n- **Mitigation Action**: Immediately block the source IP, apply input\u2011validation patch to `ping.php`, and enforce a WAF rule to sanitize the `ip` parameter."
+    }
+]

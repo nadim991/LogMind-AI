@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from xhtml2pdf import pisa
 
 class ReportGenerator:
     def __init__(self, output_dir="reports"):
@@ -14,11 +15,7 @@ class ReportGenerator:
             json.dump(alert_data, f, indent=4)
         return filepath
 
-    def generate_html(self, alert_data):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        filepath = os.path.join(self.output_dir, filename)
-
+    def _get_html_content(self, alert_data, timestamp):
         cards = ""
         for item in alert_data:
             insights_html = item['insight'].replace('\n', '<br>')
@@ -31,42 +28,56 @@ class ReportGenerator:
                 <div class="card-body">
                     <p><strong>Target URL:</strong> <code>{item['url']}</code></p>
                     <div class="ai-box">
-                        <h4>🤖 SOC Analyst Insight (AI)</h4>
+                        <h4>SOC Analyst Insight (AI)</h4>
                         <p>{insights_html}</p>
                     </div>
                 </div>
             </div>
             """
 
-        html_content = f"""<!DOCTYPE html>
-<html lang="en">
+        return f"""<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>LogMind AI - Security Incident Report</title>
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }}
-        .container {{ max-width: 900px; margin: 0 auto; }}
-        h1 {{ color: #38bdf8; text-align: center; border-bottom: 2px solid #334155; padding-bottom: 10px; }}
-        .meta {{ text-align: center; color: #94a3b8; font-size: 0.9em; margin-bottom: 30px; }}
-        .card {{ background: #1e293b; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }}
-        .card-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }}
-        .badge {{ background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }}
-        .ip {{ color: #cbd5e1; font-family: monospace; font-size: 1.1em; }}
-        code {{ background: #0f172a; padding: 4px 8px; border-radius: 4px; color: #f43f5e; font-family: monospace; }}
-        .ai-box {{ background: #0f172a; border-left: 4px solid #38bdf8; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0; }}
-        .ai-box h4 {{ margin: 0 0 10px 0; color: #38bdf8; }}
-        .ai-box p {{ margin: 0; font-size: 0.95em; line-height: 1.6; color: #e2e8f0; }}
+        body {{ font-family: Helvetica, Arial, sans-serif; background: #ffffff; color: #1e293b; padding: 10px; }}
+        h1 {{ color: #0284c7; text-align: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; font-size: 20px; }}
+        .meta {{ text-align: center; color: #64748b; font-size: 11px; margin-bottom: 20px; }}
+        .card {{ background: #f8fafc; border: 1px solid #cbd5e1; margin-bottom: 15px; padding: 12px; border-radius: 4px; }}
+        .card-header {{ margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }}
+        .badge {{ background: #dc2626; color: white; padding: 3px 8px; font-weight: bold; font-size: 10px; border-radius: 3px; }}
+        .ip {{ color: #334155; font-family: monospace; font-size: 12px; float: right; }}
+        code {{ background: #f1f5f9; padding: 2px 4px; color: #be123c; font-family: monospace; font-size: 11px; }}
+        .ai-box {{ background: #f0f9ff; border-left: 3px solid #0284c7; padding: 8px; margin-top: 10px; }}
+        .ai-box h4 {{ margin: 0 0 5px 0; color: #0369a1; font-size: 12px; }}
+        .ai-box p {{ margin: 0; font-size: 10px; line-height: 1.4; color: #334155; }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>LogMind AI - Security Report</h1>
-        <div class="meta">Generated on: {timestamp} | Total Alerts: {len(alert_data)}</div>
-        {cards}
-    </div>
+    <h1>LogMind AI - Security Incident Report</h1>
+    <div class="meta">Generated on: {timestamp} | Total Alerts: {len(alert_data)}</div>
+    {cards}
 </body>
 </html>"""
 
+    def generate_html(self, alert_data):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        filepath = os.path.join(self.output_dir, filename)
+        
+        html_content = self._get_html_content(alert_data, timestamp)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_content)
         return filepath
+
+    def generate_pdf(self, alert_data):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filepath = os.path.join(self.output_dir, filename)
+
+        html_content = self._get_html_content(alert_data, timestamp)
+        
+        with open(filepath, "wb") as pdf_file:
+            pisa_status = pisa.CreatePDF(html_content, dest=pdf_file)
+
+        return filepath if not pisa_status.err else None

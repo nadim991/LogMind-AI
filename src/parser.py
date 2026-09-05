@@ -82,8 +82,12 @@ class LogParser:
             reporter = ReportGenerator()
             json_file = reporter.generate_json(self.alerts)
             html_file = reporter.generate_html(self.alerts)
+            pdf_file = reporter.generate_pdf(self.alerts)
+            
             print("\n" + Fore.GREEN + f"[+] HTML Report Generated: {html_file}")
             print(Fore.GREEN + f"[+] JSON Report Generated: {json_file}")
+            if pdf_file:
+                print(Fore.GREEN + f"[+] PDF Report Generated:  {pdf_file}")
 
 if __name__ == "__main__":
     parser = LogParser("logs/sample_access.log")
