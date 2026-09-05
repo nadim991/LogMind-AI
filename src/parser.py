@@ -1,87 +1,90 @@
-import re
 import os
+import re
 from collections import defaultdict
 from colorama import Fore, Style, init
 from ai_agent import SOCAiAgent
+from reporter import ReportGenerator
 
 init(autoreset=True)
 
-LOG_FILE_PATH = os.path.join("logs", "sample_access.log")
+class LogParser:
+    def __init__(self, log_file):
+        self.log_file = log_file
+        self.failed_attempts = defaultdict(int)
+        self.alerts = []
+        
+        try:
+            self.agent = SOCAiAgent()
+            self.ai_enabled = True
+        except Exception:
+            self.ai_enabled = False
 
-ATTACK_PATTERNS = {
-    "SQL Injection": [r"' OR '1'='1", r"UNION SELECT", r"--"],
-    "Command Injection": [r";whoami", r"\|whoami", r"&&", r";\s*ls"],
-    "Directory Traversal": [r"\.\./\.\./", r"/etc/passwd"]
-}
+        self.sqli_pattern = re.compile(r"('|\"|%27|--|union\s+select|select\s+.*\s+from)", re.IGNORECASE)
+        self.cmdi_pattern = re.compile(r"(;|\|\||&&|\$\(.*\)|`.*`)", re.IGNORECASE)
 
-def parse_log_line(line):
-    regex = r'(\d+\.\d+\.\d+\.\d+)\s+-\s+-\s+\[(.*?)\]\s+"(\w+)\s+(.*?)\s+HTTP/.*?"\s+(\d+)\s+(\d+)'
-    match = re.match(regex, line)
-    if match:
-        return {
-            "ip": match.group(1),
-            "timestamp": match.group(2),
-            "method": match.group(3),
-            "url": match.group(4),
-            "status": int(match.group(5)),
-            "size": int(match.group(6))
-        }
-    return None
+    def parse(self):
+        print(Fore.CYAN + "="*50)
+        print(Fore.CYAN + "[*] LogMind AI - Smart SOC Engine with LLM Agent")
+        print(Fore.CYAN + "="*50 + "\n")
 
-def detect_threats(parsed_log):
-    url = parsed_log["url"]
-    detected_threats = []
-    for threat_type, patterns in ATTACK_PATTERNS.items():
-        for pattern in patterns:
-            if re.search(pattern, url, re.IGNORECASE):
-                detected_threats.append(threat_type)
-                break
-    return list(set(detected_threats))
+        if not self.ai_enabled:
+            print(Fore.YELLOW + "[!] AI Agent disabled: Check .env for GROQ_API_KEY\n")
 
-def analyze_logs():
-    if not os.path.exists(LOG_FILE_PATH):
-        print(f"{Fore.RED}[!] Log file not found at {LOG_FILE_PATH}")
-        return
+        if not os.path.exists(self.log_file):
+            print(Fore.RED + f"[X] Error: File '{self.log_file}' not found!")
+            return
 
-    print(f"{Fore.CYAN}==================================================")
-    print(f"{Fore.CYAN}[*] LogMind AI - Smart SOC Engine with LLM Agent")
-    print(f"{Fore.CYAN}==================================================\n")
-
-    try:
-        ai_agent = SOCAiAgent()
-        ai_enabled = True
-    except Exception as e:
-        print(f"{Fore.YELLOW}[!] AI Agent disabled: {e}\n")
-        ai_enabled = False
-
-    failed_login_attempts = defaultdict(int)
-
-    with open(LOG_FILE_PATH, "r") as f:
-        for line in f:
-            log_data = parse_log_line(line.strip())
-            if log_data:
-                threats = detect_threats(log_data)
+        with open(self.log_file, "r") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) < 7:
+                    continue
                 
-                if log_data["url"] == "/login.php" and log_data["status"] == 401:
-                    failed_login_attempts[log_data["ip"]] += 1
-                    if failed_login_attempts[log_data["ip"]] >= 3:
+                ip = parts[0]
+                method = parts[5].replace('"', '')
+                url = parts[6]
+                status = parts[8] if len(parts) > 8 else "200"
+
+                threats = []
+                if self.sqli_pattern.search(url):
+                    threats.append("SQL Injection")
+                if self.cmdi_pattern.search(url):
+                    threats.append("Command Injection")
+                
+                if "/login" in url and status == "401":
+                    self.failed_attempts[ip] += 1
+                    if self.failed_attempts[ip] >= 3:
                         threats.append("Brute Force Attack")
 
-                log_data["threats"] = list(set(threats))
-
-                if log_data["threats"]:
-                    print(f"{Fore.RED}[ALERT] Threat Identified!")
-                    print(f"  └─ IP: {log_data['ip']}")
-                    print(f"  └─ Target URL: {log_data['url']}")
-                    print(f"  └─ Attack Type: {Fore.YELLOW}{', '.join(log_data['threats'])}{Style.RESET_ALL}")
+                if threats:
+                    print(Fore.RED + f"[ALERT] Threat Identified!")
+                    print(Fore.WHITE + f"  └─ IP: {ip}")
+                    print(Fore.WHITE + f"  └─ Target URL: {url}")
+                    print(Fore.WHITE + f"  └─ Attack Type: {', '.join(threats)}")
                     
-                    if ai_enabled:
-                        print(f"{Fore.MAGENTA}  └─ Generating SOC Analyst Insight (LLM)...")
-                        insight = ai_agent.analyze_threat(log_data['ip'], log_data['url'], log_data['threats'])
-                        print(f"{Fore.LIGHTBLACK_EX}{insight}\n")
-                        print("-" * 50)
+                    insight_text = "AI Analysis Disabled"
+                    if self.ai_enabled:
+                        print(Fore.MAGENTA + "  └─ Generating SOC Analyst Insight (LLM)...")
+                        insight_text = self.agent.analyze_threat(ip, url, threats)
+                        print(Fore.CYAN + insight_text)
+
+                    self.alerts.append({
+                        "ip": ip,
+                        "url": url,
+                        "threat": ", ".join(threats),
+                        "insight": insight_text
+                    })
+                    print("-" * 50)
                 else:
-                    print(f"{Fore.GREEN}[INFO] Normal Traffic: {log_data['ip']} -> {log_data['url']}")
+                    print(Fore.GREEN + f"[INFO] Normal Traffic: {ip} -> {url}")
+
+        if self.alerts:
+            reporter = ReportGenerator()
+            json_file = reporter.generate_json(self.alerts)
+            html_file = reporter.generate_html(self.alerts)
+            print("\n" + Fore.GREEN + f"[+] HTML Report Generated: {html_file}")
+            print(Fore.GREEN + f"[+] JSON Report Generated: {json_file}")
 
 if __name__ == "__main__":
-    analyze_logs()
+    parser = LogParser("logs/sample_access.log")
+    parser.parse()
